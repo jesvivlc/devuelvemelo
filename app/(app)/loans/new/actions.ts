@@ -65,6 +65,23 @@ export async function createLoan(formData: FormData): Promise<CreateLoanResult> 
 
   await trackEvent(supabase, "loan_created", { kind: parsed.data.kind, loan_id: loan.id });
 
+  const photoFile = formData.get("photo");
+  if (
+    parsed.data.kind === "object" &&
+    photoFile instanceof File &&
+    photoFile.size > 0
+  ) {
+    const ext = (photoFile.name.split(".").pop() ?? "jpg").toLowerCase().slice(0, 4);
+    const path = `${user.id}/${loan.id}.${ext}`;
+    const { error: uploadErr } = await supabase.storage
+      .from("loan-photos")
+      .upload(path, photoFile, { contentType: photoFile.type, upsert: true });
+    if (!uploadErr) {
+      await supabase.from("loans").update({ photo_url: path }).eq("id", loan.id);
+    }
+    // Silently ignore upload errors — el préstamo ya está creado
+  }
+
   redirect("/dashboard");
 }
 

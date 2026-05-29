@@ -16,6 +16,7 @@ export function LoanForm({ contacts }: LoanFormProps) {
   const [contactId, setContactId] = useState("");
   const [contactList, setContactList] = useState(contacts);
   const [error, setError] = useState<string | null>(null);
+  const [photoFileName, setPhotoFileName] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleContactChange(id: string, updated: Contact[]) {
@@ -50,7 +51,10 @@ export function LoanForm({ contacts }: LoanFormProps) {
               <button
                 key={k}
                 type="button"
-                onClick={() => setKind(k)}
+                onClick={() => {
+                  setKind(k);
+                  if (k !== "object") setPhotoFileName(null);
+                }}
                 className={`flex-1 rounded-lg border py-3 text-sm font-medium transition-colors ${
                   kind === k
                     ? "border-indigo-500 bg-indigo-50 text-indigo-700"
@@ -73,6 +77,35 @@ export function LoanForm({ contacts }: LoanFormProps) {
           }
           required
         />
+
+        {kind === "object" && (
+          <div>
+            <span className="mb-1 block text-sm font-medium text-gray-700">
+              Foto{" "}
+              <span className="font-normal text-gray-400">(opcional)</span>
+            </span>
+            <label
+              htmlFor="photo"
+              className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-3 text-sm text-gray-500 transition-colors hover:border-indigo-400 hover:text-indigo-600"
+              style={{ minHeight: "var(--min-tap)" }}
+            >
+              <span aria-hidden="true">📷</span>
+              <span className="truncate">
+                {photoFileName ?? "Añadir foto del objeto"}
+              </span>
+              <input
+                id="photo"
+                name="photo"
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(e) =>
+                  setPhotoFileName(e.target.files?.[0]?.name ?? null)
+                }
+              />
+            </label>
+          </div>
+        )}
 
         {kind === "money" && (
           <Input
