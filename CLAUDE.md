@@ -31,7 +31,7 @@ Si en el futuro entra WhatsApp Business API o pasarela de pagos, será como feat
 | Mensajería al deudor | Deep links únicamente | No usar APIs de WhatsApp/SMS/Email en el MVP. |
 | Hosting front | Vercel | |
 
-## Estado actual del código (scaffold completado)
+## Estado actual del código
 
 ### Lo que ya está construido
 
@@ -40,18 +40,22 @@ Si en el futuro entra WhatsApp Business API o pasarela de pagos, será como feat
 | `middleware.ts` | Protege rutas `/dashboard` y `/loans/*` redirigiendo a `/login` sin sesión. Refresca cookies de Supabase en cada request. |
 | `lib/supabase/server.ts` | `createClient()` (anon+cookies) y `createServiceClient()` (service_role). Import `server-only`. |
 | `lib/supabase/browser.ts` | Singleton con `createBrowserClient`. Solo anon key. |
-| `lib/supabase/types.ts` | Tipos TypeScript derivados del schema: `Tone`, `LoanKind`, `LoanStatus`, `LoanWithContact`, etc. |
+| `lib/supabase/types.ts` | Tipos TypeScript derivados del schema: `Tone`, `LoanKind`, `LoanStatus`, `LoanWithContact`, `Reminder`, `Channel`, etc. |
 | `lib/analytics.ts` | `trackEvent(client, eventType, payload)`. Silencia errores para no interrumpir el flujo. |
-| `lib/llm/prompts.ts` | `buildReminderPrompt(loan, tone)` → `{ system, user }`. Sin imports de Anthropic (testeable solo). |
+| `lib/llm/prompts.ts` | `buildReminderPrompt(loan, tone)` → `{ system, user }`. 6 descripciones de tono. Sin imports de Anthropic (testeable solo). |
 | `lib/llm/client.ts` | `generateReminder(loan, tone)`. Import `server-only`. Modelo `claude-haiku-4-5`, `max_tokens: 300`. |
+| `app/page.tsx` | Redirige `/` a `/dashboard`. |
 | `app/(auth)/login/` | Formulario magic link + server action con Zod. |
 | `app/auth/callback/route.ts` | Intercambia el `code` del magic link por sesión y redirige a `/dashboard`. |
 | `app/(app)/layout.tsx` | Shell autenticado. Doble check de sesión (middleware + layout). |
-| `app/(app)/dashboard/page.tsx` | Lista préstamos activos desde `loans_with_overdue`. Empty state con CTA. |
+| `app/(app)/dashboard/page.tsx` | Lista préstamos activos desde `loans_with_overdue`. Empty state con CTA. Sin filtros ni toggle de vista. |
 | `app/(app)/loans/new/page.tsx` | Server Component que carga contactos y renderiza `LoanForm`. |
-| `app/(app)/loans/new/LoanForm.tsx` | Formulario client-side (tipo, título, importe, contacto, fecha). |
-| `app/(app)/loans/new/actions.ts` | `createLoan` y `createContact` server actions con Zod + trackEvent. |
-| `app/api/llm/remind/route.ts` | POST: auth check, Zod, cooldown 48h, LLM, inserta reminder, trackEvent. |
+| `app/(app)/loans/new/LoanForm.tsx` | Formulario client-side: toggle tipo, título, input de foto (objeto), importe (dinero), `ContactSelector`, fecha devolución. |
+| `app/(app)/loans/new/actions.ts` | `createLoan` (con subida real de foto a Supabase Storage `loan-photos`) y `createContact`, ambas con Zod + trackEvent. |
+| `app/(app)/loans/[id]/page.tsx` | Server Component: carga préstamo de `loans_with_overdue`, historial de recordatorios y URL firmada de foto. |
+| `app/(app)/loans/[id]/LoanDetail.tsx` | UI completa: badge de estado, datos del préstamo, foto, `ToneSelector`, botón de generar con cooldown, copy editable, deep links (WhatsApp/SMS/email/copiar), historial de recordatorios, acciones resolve/writeoff con `Modal` de confirmación. |
+| `app/(app)/loans/[id]/actions.ts` | `resolveLoan` y `writeOffLoan`: actualizan Supabase + `trackEvent` + redirect. |
+| `app/api/llm/remind/route.ts` | POST: auth check, Zod, cooldown 48h, `generateReminder`, inserta en `reminders`, actualiza `loans`, `trackEvent`. |
 | `components/ui/` | `Button`, `Input`, `Modal`, `cn`. Mobile-first (min-height 44px). |
 | `components/features/LoanCard.tsx` | Tarjeta de préstamo con estado y días de retraso. |
 | `components/features/ToneSelector.tsx` | 6 tonos, ⚠️ en extremos (sarcástico, pasivo). |
@@ -65,17 +69,18 @@ Si en el futuro entra WhatsApp Business API o pasarela de pagos, será como feat
 | `loan_created` | `app/(app)/loans/new/actions.ts` → `createLoan` |
 | `contact_created` | `app/(app)/loans/new/actions.ts` → `createContact` |
 | `reminder_generated` | `app/api/llm/remind/route.ts` |
+| `loan_resolved` | `app/(app)/loans/[id]/actions.ts` → `resolveLoan` |
+| `loan_written_off` | `app/(app)/loans/[id]/actions.ts` → `writeOffLoan` |
 
-Pendientes de implementar: `loan_resolved`, `loan_written_off`, `reminder_sent`, `tone_selected`.
+Pendientes de implementar: `reminder_sent` (requiere tracking client-side cuando el usuario toca el deep link), `tone_selected`.
 
 ### Lo que falta construir (MVP)
 
-- [ ] Página de detalle del préstamo (`/loans/[id]`)
-- [ ] Botón "Generar recordatorio" → llama a `/api/llm/remind` → muestra copy + deep link
-- [ ] Marcar préstamo como resuelto o cancelado (con confirm destructivo)
-- [ ] Vista de historial de recordatorios enviados
-- [ ] Página raíz `/` que redirija a `/dashboard` o `/login`
-- [ ] Subida de foto de objeto a Supabase Storage
+- [ ] Página de gestión de contactos (`/contacts`) — listar todos los contactos, editar y eliminar. Ahora solo existe creación inline desde el formulario de préstamo.
+- [ ] Filtros en el dashboard (por estado: activo/vencido/recordado; por tipo: objeto/dinero).
+- [ ] Toggle de vista en el dashboard (lista vs. cuadrícula).
+- [ ] Analytics: `reminder_sent` (cuando el usuario toca el deep link) y `tone_selected`.
+- [ ] Workflow n8n cron diario: notificar al propietario de préstamos vencidos para que decida si reclamar.
 
 ## Reglas de código
 
@@ -137,21 +142,24 @@ Para producción (Vercel), añadir también la URL de producción.
 ```
 /
 ├── app/                    # Next.js App Router
+│   ├── page.tsx            # Redirige / → /dashboard
 │   ├── (auth)/             # Rutas públicas (login)
-│   ├── (app)/              # Rutas autenticadas (dashboard, préstamos)
-│   ├── api/                # Route handlers (LLM)
+│   ├── (app)/              # Rutas autenticadas
+│   │   ├── dashboard/      # Lista de préstamos activos
+│   │   └── loans/
+│   │       ├── new/        # Formulario de creación (LoanForm + actions)
+│   │       └── [id]/       # Detalle del préstamo (LoanDetail + actions)
+│   ├── api/llm/remind/     # Route handler LLM
 │   └── auth/callback/      # Callback del magic link de Supabase
 ├── components/
 │   ├── ui/                 # Primitivos (Button, Input, Modal, cn)
 │   └── features/           # Dominio (LoanCard, ToneSelector, ContactSelector)
 ├── lib/
 │   ├── supabase/           # Clientes server/browser + tipos
-│   ├── llm/                # Wrapper Anthropic + prompts
+│   ├── llm/                # Wrapper Anthropic (client.ts) + prompts (prompts.ts)
 │   └── analytics.ts        # trackEvent
 ├── supabase/
 │   └── schema.sql          # Esquema completo + RLS
-├── n8n/
-│   └── workflows/          # JSON de workflows exportados
 └── CLAUDE.md               # Este archivo
 ```
 
