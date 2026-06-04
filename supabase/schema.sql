@@ -248,7 +248,8 @@ create policy "loan_photos_owner_delete" on storage.objects
 -- VISTA AUXILIAR — préstamos con días de retraso calculados
 -- Útil para el front y para el workflow de n8n.
 -- =============================================================================
-create or replace view public.loans_with_overdue as
+create or replace view public.loans_with_overdue
+with (security_invoker = true) as
 select
   l.*,
   c.display_name as contact_name,

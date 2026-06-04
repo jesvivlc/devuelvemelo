@@ -19,7 +19,7 @@ export async function resolveLoan(loanId: string): Promise<{ error: string }> {
 
   if (error) return { error: "No se pudo marcar como resuelto." };
 
-  await trackEvent(supabase, "loan_resolved", { loan_id: loanId });
+  await trackEvent(supabase, user.id, "loan_resolved", { loan_id: loanId });
 
   redirect("/dashboard");
 }
@@ -39,7 +39,7 @@ export async function writeOffLoan(loanId: string): Promise<{ error: string }> {
 
   if (error) return { error: "No se pudo cancelar el préstamo." };
 
-  await trackEvent(supabase, "loan_written_off", { loan_id: loanId });
+  await trackEvent(supabase, user.id, "loan_written_off", { loan_id: loanId });
 
   redirect("/dashboard");
 }

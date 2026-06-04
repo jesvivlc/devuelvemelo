@@ -3,11 +3,13 @@ import type { EventType } from "@/lib/supabase/types";
 
 export async function trackEvent(
   client: SupabaseClient,
+  userId: string,
   eventType: EventType,
   payload: Record<string, unknown> = {}
 ): Promise<void> {
   try {
     const { error } = await client.from("events").insert({
+      user_id: userId,
       event_type: eventType,
       payload,
     });

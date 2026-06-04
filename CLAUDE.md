@@ -41,21 +41,21 @@ Si en el futuro entra WhatsApp Business API o pasarela de pagos, será como feat
 | `lib/supabase/server.ts` | `createClient()` (anon+cookies) y `createServiceClient()` (service_role). Import `server-only`. |
 | `lib/supabase/browser.ts` | Singleton con `createBrowserClient`. Solo anon key. |
 | `lib/supabase/types.ts` | Tipos TypeScript derivados del schema: `Tone`, `LoanKind`, `LoanStatus`, `LoanWithContact`, `Reminder`, `Channel`, etc. |
-| `lib/analytics.ts` | `trackEvent(client, eventType, payload)`. Silencia errores para no interrumpir el flujo. |
+| `lib/analytics.ts` | `trackEvent(client, userId, eventType, payload)`. Silencia errores para no interrumpir el flujo. `userId` es obligatorio — la RLS de `events` requiere `auth.uid() = user_id`. |
 | `lib/llm/prompts.ts` | `buildReminderPrompt(loan, tone)` → `{ system, user }`. 6 descripciones de tono. Sin imports de Anthropic (testeable solo). |
 | `lib/llm/client.ts` | `generateReminder(loan, tone)`. Import `server-only`. Modelo `claude-haiku-4-5`, `max_tokens: 300`. |
 | `app/page.tsx` | Redirige `/` a `/dashboard`. |
 | `app/(auth)/login/` | Formulario magic link + server action con Zod. |
-| `app/auth/callback/route.ts` | Intercambia el `code` del magic link por sesión y redirige a `/dashboard`. |
+| `app/auth/callback/route.ts` | Intercambia el `code` del magic link por sesión y redirige a `/dashboard`. El parámetro `next` se valida como ruta relativa (previene open redirect). |
 | `app/(app)/layout.tsx` | Shell autenticado. Doble check de sesión (middleware + layout). |
-| `app/(app)/dashboard/page.tsx` | Lista préstamos activos desde `loans_with_overdue`. Empty state con CTA. Sin filtros ni toggle de vista. |
+| `app/(app)/dashboard/page.tsx` | Lista préstamos activos desde `loans_with_overdue`. Filtro `status NOT IN (resolved, written_off)` aplicado en servidor. Limit 50. Empty state con CTA. Sin filtros ni toggle de vista. |
 | `app/(app)/loans/new/page.tsx` | Server Component que carga contactos y renderiza `LoanForm`. |
 | `app/(app)/loans/new/LoanForm.tsx` | Formulario client-side: toggle tipo, título, input de foto (objeto), importe (dinero), `ContactSelector`, fecha devolución. |
 | `app/(app)/loans/new/actions.ts` | `createLoan` (con subida real de foto a Supabase Storage `loan-photos`) y `createContact`, ambas con Zod + trackEvent. |
-| `app/(app)/loans/[id]/page.tsx` | Server Component: carga préstamo de `loans_with_overdue`, historial de recordatorios y URL firmada de foto. |
+| `app/(app)/loans/[id]/page.tsx` | Server Component: verifica `owner_id = user.id` en la query (defensa en profundidad junto a RLS). Carga préstamo de `loans_with_overdue`, historial de recordatorios y URL firmada de foto. |
 | `app/(app)/loans/[id]/LoanDetail.tsx` | UI completa: badge de estado, datos del préstamo, foto, `ToneSelector`, botón de generar con cooldown, copy editable, deep links (WhatsApp/SMS/email/copiar), historial de recordatorios, acciones resolve/writeoff con `Modal` de confirmación. |
 | `app/(app)/loans/[id]/actions.ts` | `resolveLoan` y `writeOffLoan`: actualizan Supabase + `trackEvent` + redirect. |
-| `app/api/llm/remind/route.ts` | POST: auth check, Zod, cooldown 48h, `generateReminder`, inserta en `reminders`, actualiza `loans`, `trackEvent`. |
+| `app/api/llm/remind/route.ts` | POST: auth check, Zod, cooldown 48h, `generateReminder`, inserta en `reminders`, actualiza `loans`, `trackEvent`. Los dos writes devuelven error explícito si fallan (no silenciosos). |
 | `components/ui/` | `Button`, `Input`, `Modal`, `cn`. Mobile-first (min-height 44px). |
 | `components/features/LoanCard.tsx` | Tarjeta de préstamo con estado y días de retraso. |
 | `components/features/ToneSelector.tsx` | 6 tonos, ⚠️ en extremos (sarcástico, pasivo). |
@@ -108,13 +108,13 @@ Conceptos clave:
 - `loans.kind` es `'object' | 'money'`. Mismo modelo, dos sabores.
 - `contacts` son los deudores, NO son users registrados en la app.
 - `events` es el log de analytics. Insertar evento en CADA acción relevante. Sin esto no podemos decidir el pricing después.
-- La vista `loans_with_overdue` calcula `days_overdue` y `computed_status` automáticamente; usarla siempre para el dashboard.
+- La vista `loans_with_overdue` calcula `days_overdue` y `computed_status` automáticamente; usarla siempre para el dashboard. Tiene `security_invoker = true` para que las RLS policies de `loans` y `contacts` se apliquen correctamente.
 
 ## Decisiones de arquitectura tomadas
 
 - **`next.config.mjs` en lugar de `.ts`**: Next.js 14 no soporta config en TypeScript. Se usa `.mjs`.
 - **Tailwind v3**: v4 es RC-quality y su integración con Next.js 14 PostCSS es inestable.
-- **`trackEvent` recibe el cliente como parámetro**: evita imports circulares entre server y browser. El caller pasa el cliente correcto para su contexto.
+- **`trackEvent` recibe el cliente y `userId` como parámetros**: evita imports circulares entre server y browser. El caller pasa el cliente y `user.id` correctos para su contexto. `userId` es obligatorio porque la RLS policy `events_insert_self` requiere `auth.uid() = user_id`; sin él, todos los inserts fallan silenciosamente.
 - **`ContactSelector` mantiene estado local de la lista**: tras crear un contacto nuevo, lo añade al state local sin necesidad de recargar la página ni de un server refetch.
 - **Doble check de auth**: middleware (edge, refresca cookies) + layout `(app)` (render, garantiza type-safety del user en el árbol de componentes).
 - **Prompt LLM en español neutro** (válido para España y LATAM): decisión provisional hasta que se defina el mercado inicial.

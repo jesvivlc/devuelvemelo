@@ -63,7 +63,7 @@ export async function createLoan(formData: FormData): Promise<CreateLoanResult> 
     return { error: "No se pudo crear el préstamo. Inténtalo de nuevo." };
   }
 
-  await trackEvent(supabase, "loan_created", { kind: parsed.data.kind, loan_id: loan.id });
+  await trackEvent(supabase, user.id, "loan_created", { kind: parsed.data.kind, loan_id: loan.id });
 
   const photoFile = formData.get("photo");
   if (
@@ -137,7 +137,7 @@ export async function createContact(formData: FormData): Promise<CreateContactRe
     return { error: "No se pudo crear el contacto. Inténtalo de nuevo." };
   }
 
-  await trackEvent(supabase, "contact_created", { contact_id: contact.id });
+  await trackEvent(supabase, user.id, "contact_created", { contact_id: contact.id });
 
   return { contact: contact as Contact };
 }

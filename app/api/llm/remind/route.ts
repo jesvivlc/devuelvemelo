@@ -91,7 +91,7 @@ export async function POST(request: Request) {
   // para evitar problemas de timing con las cookies en route handlers.
   const service = createServiceClient();
 
-  await service.from("reminders").insert({
+  const { error: reminderError } = await service.from("reminders").insert({
     loan_id,
     owner_id: user.id,
     tone,
@@ -102,7 +102,15 @@ export async function POST(request: Request) {
     llm_tokens_out: result.tokensOut,
   });
 
-  await service
+  if (reminderError) {
+    console.error("[llm/remind] reminders.insert failed:", reminderError);
+    return NextResponse.json(
+      { error: "El mensaje se generó pero no se pudo guardar. Inténtalo de nuevo." },
+      { status: 500 }
+    );
+  }
+
+  const { error: loanUpdateError } = await service
     .from("loans")
     .update({
       reminder_count: (loan.reminder_count as number) + 1,
@@ -111,7 +119,15 @@ export async function POST(request: Request) {
     })
     .eq("id", loan_id);
 
-  await trackEvent(service, "reminder_generated", {
+  if (loanUpdateError) {
+    console.error("[llm/remind] loans.update failed:", loanUpdateError);
+    return NextResponse.json(
+      { error: "El mensaje se generó pero no se pudo registrar. Inténtalo de nuevo." },
+      { status: 500 }
+    );
+  }
+
+  await trackEvent(service, user.id, "reminder_generated", {
     loan_id,
     tone,
     model: "claude-haiku-4-5",

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { LoanWithContact, Reminder } from "@/lib/supabase/types";
 import { LoanDetail } from "./LoanDetail";
@@ -10,10 +10,16 @@ interface PageProps {
 export default async function LoanDetailPage({ params }: PageProps) {
   const supabase = createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
   const { data: loan } = await supabase
     .from("loans_with_overdue")
     .select("*")
     .eq("id", params.id)
+    .eq("owner_id", user.id)
     .single();
 
   if (!loan) notFound();

@@ -6,11 +6,12 @@ import type { LoanWithContact } from "@/lib/supabase/types";
 export default async function DashboardPage() {
   const supabase = createClient();
 
-  const { data: loans, error } = await supabase
+  const { data: activeLoans, error } = await supabase
     .from("loans_with_overdue")
     .select("*")
+    .not("status", "in", "(resolved,written_off)")
     .order("due_at", { ascending: true })
-    .limit(20);
+    .limit(50);
 
   if (error) {
     return (
@@ -19,10 +20,6 @@ export default async function DashboardPage() {
       </p>
     );
   }
-
-  const activeLoans = (loans as LoanWithContact[]).filter(
-    (l) => !["resolved", "written_off"].includes(l.status)
-  );
 
   return (
     <div className="space-y-4">
