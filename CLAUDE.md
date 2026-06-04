@@ -27,7 +27,7 @@ Si en el futuro entra WhatsApp Business API o pasarela de pagos, será como feat
 | Front-end | Next.js 14 (App Router) + Tailwind v3 | TypeScript estricto. UI mobile-first. |
 | Auth + BBDD + Storage | Supabase (`htxnmsyqcwxnoharfnrf`) | Magic link auth. Postgres. RLS estricto. Storage para fotos. |
 | Automatizaciones | n8n (self-hosted o cloud) | Solo para el cron diario y notificaciones al usuario. |
-| LLM | Anthropic Claude API (`claude-haiku-4-5` por coste) | Generación de copys. Modelo barato suficiente para esta tarea. |
+| LLM | Anthropic Claude API (`claude-haiku-4-5` por coste) | Generación de copys con 6 arquetipos de personaje. Modelo barato suficiente para esta tarea. |
 | Mensajería al deudor | Deep links únicamente | No usar APIs de WhatsApp/SMS/Email en el MVP. |
 | Hosting front | Vercel | |
 
@@ -42,8 +42,9 @@ Si en el futuro entra WhatsApp Business API o pasarela de pagos, será como feat
 | `lib/supabase/browser.ts` | Singleton con `createBrowserClient`. Solo anon key. |
 | `lib/supabase/types.ts` | Tipos TypeScript derivados del schema: `Tone`, `LoanKind`, `LoanStatus`, `LoanWithContact`, `Reminder`, `Channel`, etc. |
 | `lib/analytics.ts` | `trackEvent(client, userId, eventType, payload)`. Silencia errores para no interrumpir el flujo. `userId` es obligatorio — la RLS de `events` requiere `auth.uid() = user_id`. |
-| `lib/llm/prompts.ts` | `buildReminderPrompt(loan, tone)` → `{ system, user }`. 6 descripciones de tono. Sin imports de Anthropic (testeable solo). |
-| `lib/llm/client.ts` | `generateReminder(loan, tone)`. Import `server-only`. Modelo `claude-haiku-4-5`, `max_tokens: 300`. |
+| `lib/ai/system-prompt.ts` | `SYSTEM_PROMPT_TEMPLATE` con los 6 arquetipos calibrados. Import `server-only`. No modificar sin consultar producto. |
+| `lib/llm/prompts.ts` | `buildReminderPrompt(loan, archetype)` → `{ system, user }`. Rellena las variables del template. Import `server-only`. |
+| `lib/llm/client.ts` | `generateReminder(loan, archetype)`. Import `server-only`. Modelo `claude-haiku-4-5`, `max_tokens: 300`. |
 | `app/page.tsx` | Redirige `/` a `/dashboard`. |
 | `app/(auth)/login/` | Formulario magic link + server action con Zod. |
 | `app/auth/callback/route.ts` | Intercambia el `code` del magic link por sesión y redirige a `/dashboard`. El parámetro `next` se valida como ruta relativa (previene open redirect). |
@@ -58,7 +59,7 @@ Si en el futuro entra WhatsApp Business API o pasarela de pagos, será como feat
 | `app/api/llm/remind/route.ts` | POST: auth check, Zod, cooldown 48h, `generateReminder`, inserta en `reminders`, actualiza `loans`, `trackEvent`. Los dos writes devuelven error explícito si fallan (no silenciosos). |
 | `components/ui/` | `Button`, `Input`, `Modal`, `cn`. Mobile-first (min-height 44px). |
 | `components/features/LoanCard.tsx` | Tarjeta de préstamo con estado y días de retraso. |
-| `components/features/ToneSelector.tsx` | 6 tonos, ⚠️ en extremos (sarcástico, pasivo). |
+| `components/features/ToneSelector.tsx` | 6 arquetipos: cuñado, madre, cayetano, abogado, fallero, influencer. Sin ⚠️. |
 | `components/features/ContactSelector.tsx` | Select de contactos + modal inline de creación. Tras crear, selecciona automáticamente. |
 
 ### Eventos de analytics instrumentados
@@ -115,6 +116,7 @@ Conceptos clave:
 - **`next.config.mjs` en lugar de `.ts`**: Next.js 14 no soporta config en TypeScript. Se usa `.mjs`.
 - **Tailwind v3**: v4 es RC-quality y su integración con Next.js 14 PostCSS es inestable.
 - **`trackEvent` recibe el cliente y `userId` como parámetros**: evita imports circulares entre server y browser. El caller pasa el cliente y `user.id` correctos para su contexto. `userId` es obligatorio porque la RLS policy `events_insert_self` requiere `auth.uid() = user_id`; sin él, todos los inserts fallan silenciosamente.
+- **Arquetipos en lugar de tonos**: el tipo `Archetype` (6 valores) reemplaza completamente a `Tone`. El campo de base de datos sigue llamándose `tone` (sin migración de nombre de columna). El system prompt vive en `lib/ai/system-prompt.ts` y no debe tocarse sin consenso de producto.
 - **`ContactSelector` mantiene estado local de la lista**: tras crear un contacto nuevo, lo añade al state local sin necesidad de recargar la página ni de un server refetch.
 - **Doble check de auth**: middleware (edge, refresca cookies) + layout `(app)` (render, garantiza type-safety del user en el árbol de componentes).
 - **Prompt LLM en español neutro** (válido para España y LATAM): decisión provisional hasta que se defina el mercado inicial.

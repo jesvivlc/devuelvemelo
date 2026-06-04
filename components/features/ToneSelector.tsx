@@ -1,34 +1,36 @@
 "use client";
 
-import type { Tone } from "@/lib/supabase/types";
+import type { Archetype } from "@/lib/supabase/types";
 import { cn } from "@/components/ui/cn";
 
 interface ToneSelectorProps {
-  value: Tone;
-  onChange: (tone: Tone) => void;
+  value: Archetype;
+  onChange: (archetype: Archetype) => void;
   disabled?: boolean;
 }
 
-const TONES: { value: Tone; label: string; description: string; extreme?: true }[] = [
-  { value: "humoristico", label: "Humorístico", description: "Con humor, sin tensión" },
-  { value: "serio", label: "Serio", description: "Directo y sin rodeos" },
-  { value: "profesional", label: "Profesional", description: "Tono formal" },
-  { value: "riguroso", label: "Riguroso", description: "Muy firme, espera respuesta" },
-  { value: "sarcastico", label: "Sarcástico", description: "Irónico y algo indirecto", extreme: true },
-  { value: "pasivo", label: "Pasivo-agresivo", description: "La indirecta bien clara", extreme: true },
+const ARCHETYPES: { value: Archetype; label: string; description: string }[] = [
+  { value: "cuñado",     label: "El Cuñado",     description: "Te lo digo por tu bien" },
+  { value: "madre",      label: "La Madre",       description: "Sin decir nada, diciéndolo todo" },
+  { value: "cayetano",   label: "El Cayetano",    description: "Con delicadeza, ¿sabes?" },
+  { value: "abogado",    label: "El Abogado",     description: "Formal y sin margen" },
+  { value: "fallero",    label: "El Fallero",     description: "Directo y con alegría" },
+  { value: "influencer", label: "El Influencer",  description: "Como si fuera un story" },
 ];
 
 export function ToneSelector({ value, onChange, disabled }: ToneSelectorProps) {
   return (
     <fieldset className="w-full" disabled={disabled}>
-      <legend className="mb-2 text-sm font-medium text-gray-700">Tono del mensaje</legend>
+      <legend className="mb-2 text-sm font-medium text-gray-700">
+        Elige el mensajero
+      </legend>
       <div className="grid grid-cols-2 gap-2">
-        {TONES.map((tone) => (
+        {ARCHETYPES.map((archetype) => (
           <label
-            key={tone.value}
+            key={archetype.value}
             className={cn(
               "flex cursor-pointer flex-col rounded-lg border p-3 transition-colors",
-              value === tone.value
+              value === archetype.value
                 ? "border-indigo-500 bg-indigo-50"
                 : "border-gray-200 bg-white hover:border-gray-300",
               disabled && "cursor-not-allowed opacity-60"
@@ -37,31 +39,21 @@ export function ToneSelector({ value, onChange, disabled }: ToneSelectorProps) {
           >
             <input
               type="radio"
-              name="tone"
-              value={tone.value}
-              checked={value === tone.value}
-              onChange={() => onChange(tone.value)}
+              name="archetype"
+              value={archetype.value}
+              checked={value === archetype.value}
+              onChange={() => onChange(archetype.value)}
               className="sr-only"
             />
-            <div className="flex items-center gap-1">
-              <span className="text-sm font-medium text-gray-900">{tone.label}</span>
-              {tone.extreme && (
-                <span
-                  title="Requiere revisión antes de enviar"
-                  aria-label="Tono extremo: revisarás el mensaje antes de enviarlo"
-                  className="text-amber-500"
-                >
-                  ⚠️
-                </span>
-              )}
-            </div>
-            <span className="mt-0.5 text-xs text-gray-500">{tone.description}</span>
+            <span className="text-sm font-medium text-gray-900">
+              {archetype.label}
+            </span>
+            <span className="mt-0.5 text-xs text-gray-500">
+              {archetype.description}
+            </span>
           </label>
         ))}
       </div>
-      <p className="mt-1.5 text-xs text-gray-400">
-        ⚠️ Los tonos marcados requieren que revises el mensaje antes de enviarlo.
-      </p>
     </fieldset>
   );
 }

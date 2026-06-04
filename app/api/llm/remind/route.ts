@@ -7,13 +7,13 @@ import type { LoanWithContact } from "@/lib/supabase/types";
 
 const RemindSchema = z.object({
   loan_id: z.string().uuid(),
-  tone: z.enum([
-    "humoristico",
-    "sarcastico",
-    "pasivo",
-    "serio",
-    "profesional",
-    "riguroso",
+  archetype: z.enum([
+    "cuñado",
+    "madre",
+    "cayetano",
+    "abogado",
+    "fallero",
+    "influencer",
   ]),
   channel: z.enum(["whatsapp", "sms", "email"]).optional(),
 });
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { loan_id, tone, channel } = parsed.data;
+  const { loan_id, archetype, channel } = parsed.data;
 
   // Obtener el préstamo y verificar ownership (defensa en profundidad además de RLS)
   const { data: loan } = await supabase
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
   // Generar copy
   let result: Awaited<ReturnType<typeof generateReminder>>;
   try {
-    result = await generateReminder(loan as LoanWithContact, tone);
+    result = await generateReminder(loan as LoanWithContact, archetype);
   } catch (err) {
     console.error("[llm/remind] generateReminder failed:", err);
     return NextResponse.json(
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
   const { error: reminderError } = await service.from("reminders").insert({
     loan_id,
     owner_id: user.id,
-    tone,
+    tone: archetype,
     channel: channel ?? null,
     generated_copy: result.copy,
     llm_model: "claude-haiku-4-5",
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
 
   await trackEvent(service, user.id, "reminder_generated", {
     loan_id,
-    tone,
+    archetype,
     model: "claude-haiku-4-5",
     tokens_in: result.tokensIn,
     tokens_out: result.tokensOut,

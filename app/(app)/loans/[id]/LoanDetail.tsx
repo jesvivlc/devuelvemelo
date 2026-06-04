@@ -6,9 +6,7 @@ import { ToneSelector } from "@/components/features/ToneSelector";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { resolveLoan, writeOffLoan } from "./actions";
-import type { LoanWithContact, Reminder, Tone, Channel } from "@/lib/supabase/types";
-
-const EXTREME_TONES = new Set<Tone>(["sarcastico", "pasivo"]);
+import type { LoanWithContact, Reminder, Archetype, Channel } from "@/lib/supabase/types";
 
 const STATUS_CONFIG = {
   active: { label: "Activo", classes: "bg-blue-100 text-blue-700" },
@@ -63,7 +61,7 @@ interface LoanDetailProps {
 }
 
 export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps) {
-  const [tone, setTone] = useState<Tone>("humoristico");
+  const [archetype, setArchetype] = useState<Archetype>("cuñado");
   const [copy, setCopy] = useState<string | null>(null);
   const [editableCopy, setEditableCopy] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -79,7 +77,6 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
   const inCooldown = hoursLeft > 0;
   const cs = loan.computed_status ?? loan.status;
   const isClosed = cs === "resolved" || cs === "written_off";
-  const isExtreme = EXTREME_TONES.has(tone);
 
   const { label: statusLabel, classes: statusClasses } =
     STATUS_CONFIG[cs as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.active;
@@ -92,7 +89,7 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
       const res = await fetch("/api/llm/remind", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ loan_id: loan.id, tone }),
+        body: JSON.stringify({ loan_id: loan.id, archetype }),
       });
       const data = (await res.json()) as { copy?: string; error?: string };
       if (!res.ok) {
@@ -224,8 +221,8 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
           </h2>
 
           <ToneSelector
-            value={tone}
-            onChange={setTone}
+            value={archetype}
+            onChange={setArchetype}
             disabled={inCooldown || isGenerating}
           />
 
@@ -253,12 +250,6 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
 
           {copy !== null && (
             <div className="space-y-3">
-              {isExtreme && (
-                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
-                  ⚠️ Tono extremo. Revisa y edita el mensaje antes de enviarlo.
-                </p>
-              )}
-
               <div className="space-y-1">
                 <label
                   htmlFor="copy-editor"

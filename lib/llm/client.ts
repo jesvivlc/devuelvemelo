@@ -1,6 +1,6 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
-import type { LoanWithContact, Tone } from "@/lib/supabase/types";
+import type { LoanWithContact, Archetype } from "@/lib/supabase/types";
 import { buildReminderPrompt } from "@/lib/llm/prompts";
 
 const MODEL = "claude-haiku-4-5";
@@ -14,9 +14,9 @@ function getClient(): Anthropic {
 
 export async function generateReminder(
   loan: LoanWithContact,
-  tone: Tone
+  archetype: Archetype
 ): Promise<{ copy: string; tokensIn: number; tokensOut: number }> {
-  const { system, user } = buildReminderPrompt(loan, tone);
+  const { system, user } = buildReminderPrompt(loan, archetype);
 
   const response = await getClient().messages.create({
     model: MODEL,

@@ -1,10 +1,10 @@
-export type Tone =
-  | "humoristico"
-  | "sarcastico"
-  | "pasivo"
-  | "serio"
-  | "profesional"
-  | "riguroso";
+export type Archetype =
+  | "cuñado"
+  | "madre"
+  | "cayetano"
+  | "abogado"
+  | "fallero"
+  | "influencer";
 
 export type LoanKind = "object" | "money";
 
@@ -30,7 +30,7 @@ export interface User {
   id: string;
   email: string;
   display_name: string | null;
-  default_tone: Tone;
+  default_tone: Archetype;
   created_at: string;
   updated_at: string;
 }
@@ -79,7 +79,7 @@ export interface Reminder {
   id: string;
   loan_id: string;
   owner_id: string;
-  tone: Tone;
+  tone: Archetype;
   channel: Channel | null;
   generated_copy: string;
   edited_copy: string | null;

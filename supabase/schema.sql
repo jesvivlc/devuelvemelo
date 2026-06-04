@@ -17,8 +17,8 @@ create table public.users (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
   display_name text,
-  default_tone text default 'serio'
-    check (default_tone in ('humoristico','sarcastico','pasivo','serio','profesional','riguroso')),
+  default_tone text default 'cuñado'
+    check (default_tone in ('cuñado','madre','cayetano','abogado','fallero','influencer')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -105,7 +105,7 @@ create table public.reminders (
   owner_id uuid not null references public.users(id) on delete cascade,
 
   tone text not null
-    check (tone in ('humoristico','sarcastico','pasivo','serio','profesional','riguroso')),
+    check (tone in ('cuñado','madre','cayetano','abogado','fallero','influencer')),
   channel text check (channel in ('whatsapp','sms','email')),
 
   generated_copy text not null,                       -- el mensaje exacto que se generó
