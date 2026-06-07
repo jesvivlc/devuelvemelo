@@ -63,6 +63,8 @@ create table public.loans (
   amount_cents integer check (amount_cents is null or amount_cents > 0),
   currency char(3) default 'EUR',
   photo_url text,                                     -- referencia a Supabase Storage
+  category text not null default 'otros'
+    check (category in ('dinero','libros','ropa','herramientas','deporte','juegos','hogar','viaje','mascotas','otros')),
 
   loaned_at date not null default current_date,
   due_at date not null,
@@ -89,6 +91,7 @@ create table public.loans (
 create index idx_loans_owner on public.loans(owner_id);
 create index idx_loans_contact on public.loans(contact_id);
 create index idx_loans_status on public.loans(status);
+create index idx_loans_category on public.loans(category);
 create index idx_loans_due_at on public.loans(due_at) where status in ('active','overdue','reminded');
 
 comment on table public.loans is 'Préstamos de objetos o microdeudas. Polimórfico vía kind.';

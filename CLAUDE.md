@@ -42,17 +42,19 @@ Si en el futuro entra WhatsApp Business API o pasarela de pagos, será como feat
 | `lib/supabase/browser.ts` | Singleton con `createBrowserClient`. Solo anon key. |
 | `lib/supabase/types.ts` | Tipos TypeScript derivados del schema: `Tone`, `LoanKind`, `LoanStatus`, `LoanWithContact`, `Reminder`, `Channel`, etc. |
 | `lib/analytics.ts` | `trackEvent(client, userId, eventType, payload)`. Silencia errores para no interrumpir el flujo. `userId` es obligatorio — la RLS de `events` requiere `auth.uid() = user_id`. |
-| `lib/ai/system-prompt.ts` | `SYSTEM_PROMPT_TEMPLATE` con los 6 arquetipos calibrados. Import `server-only`. No modificar sin consultar producto. |
-| `lib/llm/prompts.ts` | `buildReminderPrompt(loan, archetype)` → `{ system, user }`. Rellena las variables del template. Import `server-only`. |
+| `lib/ai/system-prompt.ts` | `SYSTEM_PROMPT_TEMPLATE` con los 6 arquetipos calibrados y variable `{category}`. Import `server-only`. No modificar sin consultar producto. |
+| `lib/constants/categories.ts` | `LOAN_CATEGORIES` (array de 10 categorías con id, label, emoji, placeholder) y tipo `LoanCategory`. Sin server-only — usado en cliente y servidor. |
+| `lib/llm/prompts.ts` | `buildReminderPrompt(loan, archetype)` → `{ system, user }`. Rellena las variables del template incluyendo `{category}`. Import `server-only`. |
 | `lib/llm/client.ts` | `generateReminder(loan, archetype)`. Import `server-only`. Modelo `claude-haiku-4-5`, `max_tokens: 300`. |
 | `app/page.tsx` | Redirige `/` a `/dashboard`. |
 | `app/(auth)/login/` | Formulario magic link + server action con Zod. |
 | `app/auth/callback/route.ts` | Intercambia el `code` del magic link por sesión y redirige a `/dashboard`. El parámetro `next` se valida como ruta relativa (previene open redirect). |
 | `app/(app)/layout.tsx` | Shell autenticado. Doble check de sesión (middleware + layout). |
-| `app/(app)/dashboard/page.tsx` | Lista préstamos activos desde `loans_with_overdue`. Filtro `status NOT IN (resolved, written_off)` aplicado en servidor. Limit 50. Empty state con CTA. Sin filtros ni toggle de vista. |
+| `app/(app)/dashboard/page.tsx` | Lista préstamos activos desde `loans_with_overdue`. Filtro por `status` y por `category` (vía `?category=` en URL). Limit 50. |
+| `app/(app)/dashboard/CategoryFilter.tsx` | Client Component: `<select>` que actualiza el query param `category` en la URL para filtrar el dashboard. |
 | `app/(app)/loans/new/page.tsx` | Server Component que carga contactos y renderiza `LoanForm`. |
 | `app/(app)/loans/new/LoanForm.tsx` | Formulario client-side: toggle tipo, título, input de foto (objeto), importe (dinero), `ContactSelector`, fecha devolución. |
-| `app/(app)/loans/new/actions.ts` | `createLoan` (con subida real de foto a Supabase Storage `loan-photos`) y `createContact`, ambas con Zod + trackEvent. |
+| `app/(app)/loans/new/actions.ts` | `createLoan` (con subida real de foto a Supabase Storage `loan-photos`) y `createContact`, ambas con Zod + trackEvent. `category` validada en servidor. |
 | `app/(app)/loans/[id]/page.tsx` | Server Component: verifica `owner_id = user.id` en la query (defensa en profundidad junto a RLS). Carga préstamo de `loans_with_overdue`, historial de recordatorios y URL firmada de foto. |
 | `app/(app)/loans/[id]/LoanDetail.tsx` | UI completa: badge de estado, datos del préstamo, foto, `ToneSelector`, botón de generar con cooldown, copy editable, deep links (WhatsApp/SMS/email/copiar), historial de recordatorios, acciones resolve/writeoff con `Modal` de confirmación. |
 | `app/(app)/loans/[id]/actions.ts` | `resolveLoan` y `writeOffLoan`: actualizan Supabase + `trackEvent` + redirect. |
@@ -117,6 +119,7 @@ Conceptos clave:
 - **Tailwind v3**: v4 es RC-quality y su integración con Next.js 14 PostCSS es inestable.
 - **`trackEvent` recibe el cliente y `userId` como parámetros**: evita imports circulares entre server y browser. El caller pasa el cliente y `user.id` correctos para su contexto. `userId` es obligatorio porque la RLS policy `events_insert_self` requiere `auth.uid() = user_id`; sin él, todos los inserts fallan silenciosamente.
 - **Arquetipos en lugar de tonos**: el tipo `Archetype` (6 valores) reemplaza completamente a `Tone`. El campo de base de datos sigue llamándose `tone` (sin migración de nombre de columna). El system prompt vive en `lib/ai/system-prompt.ts` y no debe tocarse sin consenso de producto.
+- **Categorías**: `loans.category` es `NOT NULL`. Para préstamos de dinero (`kind = 'money'`), el formulario auto-asigna `category = 'dinero'` y oculta el selector. Las constantes y el tipo `LoanCategory` viven en `lib/constants/categories.ts` y son la fuente de verdad para UI, servidor y LLM.
 - **`ContactSelector` mantiene estado local de la lista**: tras crear un contacto nuevo, lo añade al state local sin necesidad de recargar la página ni de un server refetch.
 - **Doble check de auth**: middleware (edge, refresca cookies) + layout `(app)` (render, garantiza type-safety del user en el árbol de componentes).
 - **Prompt LLM en español neutro** (válido para España y LATAM): decisión provisional hasta que se defina el mercado inicial.

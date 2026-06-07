@@ -1,17 +1,28 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { LoanCard } from "@/components/features/LoanCard";
+import { CategoryFilter } from "./CategoryFilter";
 import type { LoanWithContact } from "@/lib/supabase/types";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { category?: string | undefined };
+}) {
   const supabase = createClient();
+  const categoryFilter = searchParams.category;
 
-  const { data: activeLoans, error } = await supabase
+  const baseQuery = supabase
     .from("loans_with_overdue")
     .select("*")
     .not("status", "in", "(resolved,written_off)")
     .order("due_at", { ascending: true })
     .limit(50);
+
+  const { data: activeLoans, error } = await (
+    categoryFilter ? baseQuery.eq("category", categoryFilter) : baseQuery
+  );
 
   if (error) {
     return (
@@ -34,9 +45,17 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
+      <Suspense fallback={null}>
+        <CategoryFilter />
+      </Suspense>
+
       {activeLoans.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 py-12 text-center">
-          <p className="text-sm text-gray-400">No tienes préstamos activos.</p>
+          <p className="text-sm text-gray-400">
+            {categoryFilter
+              ? "No hay préstamos activos en esta categoría."
+              : "No tienes préstamos activos."}
+          </p>
           <Link
             href="/loans/new"
             className="mt-3 inline-block text-sm font-medium text-indigo-600 hover:underline"
@@ -48,7 +67,7 @@ export default async function DashboardPage() {
         <ul className="space-y-3">
           {activeLoans.map((loan) => (
             <li key={loan.id}>
-              <LoanCard loan={loan} />
+              <LoanCard loan={loan as LoanWithContact} />
             </li>
           ))}
         </ul>

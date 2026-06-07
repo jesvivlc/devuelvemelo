@@ -13,6 +13,10 @@ const BaseSchema = z.object({
   contact_id: z.string().uuid("Selecciona un contacto"),
   due_at: z.string().min(1, "La fecha de devolución es obligatoria"),
   description: z.string().max(500).optional(),
+  category: z.enum([
+    "dinero", "libros", "ropa", "herramientas", "deporte",
+    "juegos", "hogar", "viaje", "mascotas", "otros",
+  ]),
 });
 
 const LoanSchema = z.discriminatedUnion("kind", [
@@ -38,6 +42,7 @@ export async function createLoan(formData: FormData): Promise<CreateLoanResult> 
     description: formData.get("description") || undefined,
     amount_cents: formData.get("amount_cents") || undefined,
     currency: formData.get("currency") || "EUR",
+    category: formData.get("category"),
   };
 
   const parsed = LoanSchema.safeParse(raw);

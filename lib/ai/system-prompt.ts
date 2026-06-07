@@ -18,6 +18,7 @@ REGLAS DURAS (no las rompas nunca):
 VARIABLES DE CONTEXTO:
 - Arquetipo pedido: {archetype}
 - Qué se reclama: {item} (tipo: {kind} — objeto o dinero)
+- Categoría del objeto: {category}
 - Importe (si dinero): {amount}
 - Relación con el deudor: {relationship}
 - Nombre del deudor: {contact_name}

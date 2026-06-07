@@ -1,5 +1,6 @@
 import "server-only";
 import type { LoanWithContact, Archetype } from "@/lib/supabase/types";
+import { LOAN_CATEGORIES } from "@/lib/constants/categories";
 import { SYSTEM_PROMPT_TEMPLATE } from "@/lib/ai/system-prompt";
 
 function formatAmount(amountCents: number, currency: string): string {
@@ -25,10 +26,16 @@ export function buildReminderPrompt(
 
   const daysOverdue = String(Math.max(0, loan.days_overdue));
 
+  const categoryInfo = LOAN_CATEGORIES.find((c) => c.id === loan.category);
+  const category = categoryInfo
+    ? `${categoryInfo.label} ${categoryInfo.emoji}`
+    : loan.category;
+
   const system = SYSTEM_PROMPT_TEMPLATE
     .replace("{archetype}", archetype)
     .replace("{item}", item)
     .replace("{kind}", loan.kind === "money" ? "dinero" : "objeto")
+    .replace("{category}", category)
     .replace("{amount}", amount)
     .replace("{relationship}", loan.contact_relationship)
     .replace("{contact_name}", loan.contact_name)

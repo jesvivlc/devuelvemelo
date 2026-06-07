@@ -4,8 +4,11 @@ import { useState, useTransition } from "react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { ContactSelector } from "@/components/features/ContactSelector";
+import { LOAN_CATEGORIES, type LoanCategory } from "@/lib/constants/categories";
 import { createLoan } from "./actions";
 import type { Contact, LoanKind } from "@/lib/supabase/types";
+
+const OBJECT_CATEGORIES = LOAN_CATEGORIES.filter((c) => c.id !== "dinero");
 
 interface LoanFormProps {
   contacts: Contact[];
@@ -13,11 +16,18 @@ interface LoanFormProps {
 
 export function LoanForm({ contacts }: LoanFormProps) {
   const [kind, setKind] = useState<LoanKind>("object");
+  const [category, setCategory] = useState<LoanCategory>("libros");
   const [contactId, setContactId] = useState("");
   const [contactList, setContactList] = useState(contacts);
   const [error, setError] = useState<string | null>(null);
   const [photoFileName, setPhotoFileName] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  function handleKindChange(newKind: LoanKind) {
+    setKind(newKind);
+    setCategory(newKind === "money" ? "dinero" : "libros");
+    if (newKind !== "object") setPhotoFileName(null);
+  }
 
   function handleContactChange(id: string, updated: Contact[]) {
     setContactId(id);
@@ -30,6 +40,7 @@ export function LoanForm({ contacts }: LoanFormProps) {
     const formData = new FormData(e.currentTarget);
     formData.set("kind", kind);
     formData.set("contact_id", contactId);
+    formData.set("category", category);
 
     startTransition(async () => {
       const result = await createLoan(formData);
@@ -37,6 +48,8 @@ export function LoanForm({ contacts }: LoanFormProps) {
       // En caso de éxito la server action hace redirect a /dashboard
     });
   }
+
+  const currentCategoryInfo = LOAN_CATEGORIES.find((c) => c.id === category);
 
   return (
     <div className="space-y-5">
@@ -51,10 +64,7 @@ export function LoanForm({ contacts }: LoanFormProps) {
               <button
                 key={k}
                 type="button"
-                onClick={() => {
-                  setKind(k);
-                  if (k !== "object") setPhotoFileName(null);
-                }}
+                onClick={() => handleKindChange(k)}
                 className={`flex-1 rounded-lg border py-3 text-sm font-medium transition-colors ${
                   kind === k
                     ? "border-indigo-500 bg-indigo-50 text-indigo-700"
@@ -68,13 +78,38 @@ export function LoanForm({ contacts }: LoanFormProps) {
           </div>
         </fieldset>
 
+        {/* Categoría — solo para objetos, para dinero se autocompleta */}
+        {kind === "object" && (
+          <div>
+            <span className="mb-2 block text-sm font-medium text-gray-700">
+              Categoría <span className="text-red-500">*</span>
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {OBJECT_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setCategory(cat.id)}
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-colors ${
+                    category === cat.id
+                      ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                      : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                  }`}
+                  style={{ minHeight: "var(--min-tap)" }}
+                >
+                  <span aria-hidden="true">{cat.emoji}</span>
+                  <span>{cat.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <Input
           id="title"
           name="title"
           label={kind === "object" ? "¿Qué prestaste?" : "Concepto"}
-          placeholder={
-            kind === "object" ? "Libro El nombre del viento" : "Cena del viernes"
-          }
+          placeholder={currentCategoryInfo?.placeholder ?? ""}
           required
         />
 

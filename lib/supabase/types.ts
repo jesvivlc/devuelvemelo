@@ -1,3 +1,6 @@
+import type { LoanCategory } from "@/lib/constants/categories";
+export type { LoanCategory };
+
 export type Archetype =
   | "cuñado"
   | "madre"
@@ -51,6 +54,7 @@ export interface Loan {
   owner_id: string;
   contact_id: string;
   kind: LoanKind;
+  category: LoanCategory;
   title: string;
   description: string | null;
   amount_cents: number | null;
