@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { LoanCard } from "@/components/features/LoanCard";
+import { ContactActions } from "./ContactActions";
 import type { Contact, LoanWithContact } from "@/lib/supabase/types";
 
 export default async function ContactDetailPage({
@@ -41,15 +42,18 @@ export default async function ContactDetailPage({
       </Link>
 
       {/* Ficha del contacto */}
-      <div className="rounded-xl border bg-white p-4">
-        <h1 className="text-lg font-semibold text-gray-900">{c.display_name}</h1>
-        <p className="mt-0.5 text-sm capitalize text-gray-500">{c.relationship}</p>
-        {(c.phone ?? c.email) && (
-          <div className="mt-2 space-y-0.5">
-            {c.phone && <p className="text-sm text-gray-600">{c.phone}</p>}
-            {c.email && <p className="text-sm text-gray-600">{c.email}</p>}
-          </div>
-        )}
+      <div className="rounded-xl border bg-white p-4 space-y-3">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">{c.display_name}</h1>
+          <p className="mt-0.5 text-sm capitalize text-gray-500">{c.relationship}</p>
+          {(c.phone ?? c.email) && (
+            <div className="mt-2 space-y-0.5">
+              {c.phone && <p className="text-sm text-gray-600">{c.phone}</p>}
+              {c.email && <p className="text-sm text-gray-600">{c.email}</p>}
+            </div>
+          )}
+        </div>
+        <ContactActions contact={c} />
       </div>
 
       {activeLoans.length > 0 && (

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ToneSelector } from "@/components/features/ToneSelector";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { resolveLoan, writeOffLoan, markReminderSent } from "./actions";
+import { resolveLoan, writeOffLoan, markReminderSent, trackToneSelected } from "./actions";
 import type { LoanWithContact, Reminder, Archetype, Channel } from "@/lib/supabase/types";
 
 const STATUS_CONFIG = {
@@ -230,7 +230,10 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
 
           <ToneSelector
             value={archetype}
-            onChange={setArchetype}
+            onChange={(a) => {
+              setArchetype(a);
+              void trackToneSelected(loan.id, a);
+            }}
             disabled={inCooldown || isGenerating}
           />
 

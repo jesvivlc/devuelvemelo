@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { loginWithMagicLink } from "./actions";
 
 export default function LoginPage() {
@@ -76,6 +77,13 @@ export default function LoginPage() {
             </button>
           </form>
         )}
+        <p className="text-center text-xs text-gray-400">
+          Al entrar aceptas nuestros{" "}
+          <Link href="/legal" className="underline hover:text-gray-600">
+            términos y política de privacidad
+          </Link>
+          .
+        </p>
       </div>
     </main>
   );

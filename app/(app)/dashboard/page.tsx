@@ -4,16 +4,18 @@ import { createClient } from "@/lib/supabase/server";
 import { LoanCard } from "@/components/features/LoanCard";
 import { CategoryFilter } from "./CategoryFilter";
 import { StatusFilter } from "./StatusFilter";
+import { ViewToggle } from "./ViewToggle";
 import type { LoanWithContact } from "@/lib/supabase/types";
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { category?: string | undefined; status?: string | undefined };
+  searchParams: { category?: string | undefined; status?: string | undefined; view?: string | undefined };
 }) {
   const supabase = createClient();
   const categoryFilter = searchParams.category;
   const statusFilter = searchParams.status;
+  const viewMode = searchParams.view === "grid" ? "grid" : "list";
 
   let query = supabase
     .from("loans_with_overdue")
@@ -56,13 +58,18 @@ export default async function DashboardPage({
         </Link>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Suspense fallback={null}>
           <StatusFilter />
         </Suspense>
         <Suspense fallback={null}>
           <CategoryFilter />
         </Suspense>
+        <div className="ml-auto">
+          <Suspense fallback={null}>
+            <ViewToggle />
+          </Suspense>
+        </div>
       </div>
 
       {activeLoans.length === 0 ? (
@@ -79,6 +86,14 @@ export default async function DashboardPage({
             Registra el primero →
           </Link>
         </div>
+      ) : viewMode === "grid" ? (
+        <ul className="grid grid-cols-2 gap-3">
+          {activeLoans.map((loan) => (
+            <li key={loan.id}>
+              <LoanCard loan={loan as LoanWithContact} />
+            </li>
+          ))}
+        </ul>
       ) : (
         <ul className="space-y-3">
           {activeLoans.map((loan) => (

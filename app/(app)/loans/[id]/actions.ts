@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/analytics";
-import type { Channel } from "@/lib/supabase/types";
+import type { Archetype, Channel } from "@/lib/supabase/types";
 
 export async function resolveLoan(loanId: string): Promise<{ error: string }> {
   const supabase = createClient();
@@ -43,6 +43,18 @@ export async function writeOffLoan(loanId: string): Promise<{ error: string }> {
   await trackEvent(supabase, user.id, "loan_written_off", { loan_id: loanId });
 
   redirect("/dashboard");
+}
+
+export async function trackToneSelected(
+  loanId: string,
+  archetype: Archetype
+): Promise<void> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await trackEvent(supabase, user.id, "tone_selected", { loan_id: loanId, archetype });
 }
 
 export async function markReminderSent(

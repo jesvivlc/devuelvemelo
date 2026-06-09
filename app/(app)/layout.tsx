@@ -53,6 +53,11 @@ export default async function AppLayout({
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">
         {children}
       </main>
+      <footer className="mx-auto w-full max-w-2xl px-4 py-4">
+        <Link href="/legal" className="text-xs text-gray-300 hover:text-gray-500">
+          Aviso legal · Privacidad · Términos
+        </Link>
+      </footer>
     </div>
   );
 }
