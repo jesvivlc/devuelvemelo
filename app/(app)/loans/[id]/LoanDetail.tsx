@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ToneSelector } from "@/components/features/ToneSelector";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { resolveLoan, writeOffLoan } from "./actions";
+import { resolveLoan, writeOffLoan, markReminderSent } from "./actions";
 import type { LoanWithContact, Reminder, Archetype, Channel } from "@/lib/supabase/types";
 
 const STATUS_CONFIG = {
@@ -23,24 +23,18 @@ function formatDate(dateStr: string): string {
 }
 
 function formatCurrency(cents: number, currency: string): string {
-  return new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency,
-  }).format(cents / 100);
+  return new Intl.NumberFormat("es-ES", { style: "currency", currency }).format(
+    cents / 100
+  );
 }
 
 function hoursUntilCooldownEnds(lastRemindedAt: string | null): number {
   if (!lastRemindedAt) return 0;
-  const elapsed =
-    (Date.now() - new Date(lastRemindedAt).getTime()) / 3_600_000;
+  const elapsed = (Date.now() - new Date(lastRemindedAt).getTime()) / 3_600_000;
   return Math.max(0, 48 - elapsed);
 }
 
-function buildDeepLink(
-  channel: Channel,
-  copy: string,
-  loan: LoanWithContact
-): string {
+function buildDeepLink(channel: Channel, copy: string, loan: LoanWithContact): string {
   const text = encodeURIComponent(copy);
   if (channel === "whatsapp" && loan.contact_phone) {
     return `https://wa.me/${loan.contact_phone.replace(/\D/g, "")}?text=${text}`;
@@ -64,11 +58,10 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
   const [archetype, setArchetype] = useState<Archetype>("cuñado");
   const [copy, setCopy] = useState<string | null>(null);
   const [editableCopy, setEditableCopy] = useState("");
+  const [reminderId, setReminderId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
-  const [confirmAction, setConfirmAction] = useState<
-    "resolve" | "writeoff" | null
-  >(null);
+  const [confirmAction, setConfirmAction] = useState<"resolve" | "writeoff" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
@@ -84,6 +77,7 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
   async function handleGenerate() {
     setGenerateError(null);
     setCopy(null);
+    setReminderId(null);
     setIsGenerating(true);
     try {
       const res = await fetch("/api/llm/remind", {
@@ -91,12 +85,17 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ loan_id: loan.id, archetype }),
       });
-      const data = (await res.json()) as { copy?: string; error?: string };
+      const data = (await res.json()) as {
+        copy?: string;
+        error?: string;
+        reminder_id?: string;
+      };
       if (!res.ok) {
         setGenerateError(data.error ?? "Error al generar el mensaje.");
       } else if (data.copy) {
         setCopy(data.copy);
         setEditableCopy(data.copy);
+        setReminderId(data.reminder_id ?? null);
       }
     } catch {
       setGenerateError("Error de conexión. Inténtalo de nuevo.");
@@ -126,6 +125,11 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
     });
   }
 
+  // Fire-and-forget: tracking no debe bloquear la navegación
+  function trackSend(channel: Channel) {
+    if (reminderId) void markReminderSent(reminderId, channel);
+  }
+
   return (
     <div className="space-y-6">
       <Link
@@ -142,7 +146,10 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
             {loan.title}
           </h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            <Link href={`/contacts/${loan.contact_id}`} className="hover:underline">
+            <Link
+              href={`/contacts/${loan.contact_id}`}
+              className="hover:underline"
+            >
               {loan.contact_name}
             </Link>
             {" "}· {loan.contact_relationship}
@@ -195,9 +202,7 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
         {loan.reminder_count > 0 && (
           <div className="flex justify-between">
             <span>Recordatorios enviados</span>
-            <span className="font-medium text-gray-900">
-              {loan.reminder_count}
-            </span>
+            <span className="font-medium text-gray-900">{loan.reminder_count}</span>
           </div>
         )}
         {loan.description && (
@@ -277,6 +282,7 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
                       href={buildDeepLink("whatsapp", editableCopy, loan)}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() => trackSend("whatsapp")}
                       className="inline-flex items-center rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
                       style={{ minHeight: "var(--min-tap)" }}
                     >
@@ -286,6 +292,7 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
                   {loan.contact_phone && (
                     <a
                       href={buildDeepLink("sms", editableCopy, loan)}
+                      onClick={() => trackSend("sms")}
                       className="inline-flex items-center rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
                       style={{ minHeight: "var(--min-tap)" }}
                     >
@@ -295,6 +302,7 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
                   {loan.contact_email && (
                     <a
                       href={buildDeepLink("email", editableCopy, loan)}
+                      onClick={() => trackSend("email")}
                       className="inline-flex items-center rounded-lg border border-purple-300 bg-purple-50 px-3 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100"
                       style={{ minHeight: "var(--min-tap)" }}
                     >
@@ -312,8 +320,8 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
                 </div>
                 {!loan.contact_phone && !loan.contact_email && (
                   <p className="text-xs text-gray-400">
-                    Este contacto no tiene teléfono ni email. Usa "Copiar
-                    texto" y pégalo manualmente.
+                    Este contacto no tiene teléfono ni email. Usa "Copiar texto"
+                    y pégalo manualmente.
                   </p>
                 )}
               </div>
@@ -352,6 +360,13 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
         <div className="space-y-3 pt-2">
           <h2 className="text-sm font-semibold text-gray-500">Acciones</h2>
           <div className="flex flex-col gap-2">
+            <Link
+              href={`/loans/${loan.id}/edit`}
+              className="flex w-full items-center justify-center rounded-lg border border-gray-300 px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              style={{ minHeight: "var(--min-tap)" }}
+            >
+              Editar préstamo
+            </Link>
             <Button
               variant="secondary"
               className="w-full border-green-300 text-green-700 hover:bg-green-50"

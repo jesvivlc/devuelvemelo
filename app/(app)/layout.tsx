@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { logoutAction } from "./actions/logout";
 
 export default async function AppLayout({
   children,
@@ -12,8 +13,6 @@ export default async function AppLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Doble verificación: el middleware protege la ruta a nivel de red,
-  // este check garantiza type-safety del user en el árbol de componentes.
   if (!user) {
     redirect("/login");
   }
@@ -21,27 +20,34 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b bg-white px-4 py-3">
-        <div className="mx-auto flex max-w-2xl items-center gap-4">
+        <div className="mx-auto flex max-w-2xl items-center gap-3">
           <span className="shrink-0 font-bold text-indigo-600">
             Devuélvemelo
           </span>
-          <nav className="flex flex-1 gap-4 text-sm">
-            <Link
-              href="/dashboard"
-              className="text-gray-600 hover:text-gray-900"
-            >
+          <nav className="flex flex-1 gap-3 text-sm">
+            <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
               Préstamos
             </Link>
-            <Link
-              href="/contacts"
-              className="text-gray-600 hover:text-gray-900"
-            >
+            <Link href="/contacts" className="text-gray-600 hover:text-gray-900">
               Contactos
             </Link>
+            <Link href="/stats" className="text-gray-600 hover:text-gray-900">
+              Stats
+            </Link>
           </nav>
-          <span className="max-w-[120px] shrink-0 truncate text-xs text-gray-400">
-            {user.email}
-          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="max-w-[80px] truncate text-xs text-gray-400">
+              {user.email}
+            </span>
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+              >
+                Salir
+              </button>
+            </form>
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">

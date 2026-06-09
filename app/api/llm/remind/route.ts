@@ -104,16 +104,20 @@ export async function POST(request: Request) {
   // para evitar problemas de timing con las cookies en route handlers.
   const service = createServiceClient();
 
-  const { error: reminderError } = await service.from("reminders").insert({
-    loan_id,
-    owner_id: user.id,
-    tone: archetype,
-    channel: channel ?? null,
-    generated_copy: result.copy,
-    llm_model: "claude-haiku-4-5",
-    llm_tokens_in: result.tokensIn,
-    llm_tokens_out: result.tokensOut,
-  });
+  const { data: reminder, error: reminderError } = await service
+    .from("reminders")
+    .insert({
+      loan_id,
+      owner_id: user.id,
+      tone: archetype,
+      channel: channel ?? null,
+      generated_copy: result.copy,
+      llm_model: "claude-haiku-4-5",
+      llm_tokens_in: result.tokensIn,
+      llm_tokens_out: result.tokensOut,
+    })
+    .select("id")
+    .single();
 
   if (reminderError) {
     console.error("[llm/remind] reminders.insert failed:", reminderError);
@@ -148,5 +152,5 @@ export async function POST(request: Request) {
     tokens_out: result.tokensOut,
   });
 
-  return NextResponse.json({ copy: result.copy });
+  return NextResponse.json({ copy: result.copy, reminder_id: reminder?.id ?? null });
 }

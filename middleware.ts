@@ -33,7 +33,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Rutas que requieren autenticación
-  const protectedPrefixes = ["/dashboard", "/loans", "/contacts", "/onboarding"];
+  const protectedPrefixes = ["/dashboard", "/loans", "/contacts", "/onboarding", "/stats"];
   const isProtected = protectedPrefixes.some((p) => pathname.startsWith(p));
 
   if (!user && isProtected) {

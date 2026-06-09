@@ -3,26 +3,37 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { LoanCard } from "@/components/features/LoanCard";
 import { CategoryFilter } from "./CategoryFilter";
+import { StatusFilter } from "./StatusFilter";
 import type { LoanWithContact } from "@/lib/supabase/types";
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { category?: string | undefined };
+  searchParams: { category?: string | undefined; status?: string | undefined };
 }) {
   const supabase = createClient();
   const categoryFilter = searchParams.category;
+  const statusFilter = searchParams.status;
 
-  const baseQuery = supabase
+  let query = supabase
     .from("loans_with_overdue")
     .select("*")
     .not("status", "in", "(resolved,written_off)")
     .order("due_at", { ascending: true })
     .limit(50);
 
-  const { data: activeLoans, error } = await (
-    categoryFilter ? baseQuery.eq("category", categoryFilter) : baseQuery
-  );
+  if (categoryFilter) {
+    query = query.eq("category", categoryFilter);
+  }
+  if (statusFilter === "overdue") {
+    query = query.eq("computed_status", "overdue");
+  } else if (statusFilter === "active") {
+    query = query.eq("computed_status", "active");
+  } else if (statusFilter === "reminded") {
+    query = query.eq("status", "reminded");
+  }
+
+  const { data: activeLoans, error } = await query;
 
   if (error) {
     return (
@@ -45,15 +56,20 @@ export default async function DashboardPage({
         </Link>
       </div>
 
-      <Suspense fallback={null}>
-        <CategoryFilter />
-      </Suspense>
+      <div className="flex flex-wrap gap-2">
+        <Suspense fallback={null}>
+          <StatusFilter />
+        </Suspense>
+        <Suspense fallback={null}>
+          <CategoryFilter />
+        </Suspense>
+      </div>
 
       {activeLoans.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 py-12 text-center">
           <p className="text-sm text-gray-400">
-            {categoryFilter
-              ? "No hay préstamos activos en esta categoría."
+            {categoryFilter || statusFilter
+              ? "No hay préstamos que coincidan con los filtros."
               : "No tienes préstamos activos."}
           </p>
           <Link

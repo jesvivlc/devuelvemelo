@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/analytics";
+import type { Channel } from "@/lib/supabase/types";
 
 export async function resolveLoan(loanId: string): Promise<{ error: string }> {
   const supabase = createClient();
@@ -42,4 +43,27 @@ export async function writeOffLoan(loanId: string): Promise<{ error: string }> {
   await trackEvent(supabase, user.id, "loan_written_off", { loan_id: loanId });
 
   redirect("/dashboard");
+}
+
+export async function markReminderSent(
+  reminderId: string,
+  channel: Channel
+): Promise<void> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await Promise.all([
+    supabase
+      .from("reminders")
+      .update({ was_sent: true, sent_at: new Date().toISOString(), channel })
+      .eq("id", reminderId)
+      .eq("owner_id", user.id),
+    trackEvent(supabase, user.id, "reminder_sent", {
+      reminder_id: reminderId,
+      channel,
+    }),
+  ]);
 }
