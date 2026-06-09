@@ -75,10 +75,23 @@ export async function POST(request: Request) {
     }
   }
 
+  // Cargar historial para no repetir mensajes anteriores
+  const { data: prevReminders } = await supabase
+    .from("reminders")
+    .select("tone, generated_copy")
+    .eq("loan_id", loan_id)
+    .eq("owner_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(3);
+
   // Generar copy
   let result: Awaited<ReturnType<typeof generateReminder>>;
   try {
-    result = await generateReminder(loan as LoanWithContact, archetype);
+    result = await generateReminder(
+      loan as LoanWithContact,
+      archetype,
+      (prevReminders ?? []) as { tone: string; generated_copy: string }[]
+    );
   } catch (err) {
     console.error("[llm/remind] generateReminder failed:", err);
     return NextResponse.json(

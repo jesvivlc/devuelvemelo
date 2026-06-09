@@ -14,9 +14,10 @@ function getClient(): Anthropic {
 
 export async function generateReminder(
   loan: LoanWithContact,
-  archetype: Archetype
+  archetype: Archetype,
+  previousReminders: { tone: string; generated_copy: string }[] = []
 ): Promise<{ copy: string; tokensIn: number; tokensOut: number }> {
-  const { system, user } = buildReminderPrompt(loan, archetype);
+  const { system, user } = buildReminderPrompt(loan, archetype, previousReminders);
 
   const response = await getClient().messages.create({
     model: MODEL,

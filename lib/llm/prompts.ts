@@ -12,7 +12,8 @@ function formatAmount(amountCents: number, currency: string): string {
 
 export function buildReminderPrompt(
   loan: LoanWithContact,
-  archetype: Archetype
+  archetype: Archetype,
+  previousReminders: { tone: string; generated_copy: string }[] = []
 ): { system: string; user: string } {
   const item =
     loan.kind === "money"
@@ -43,5 +44,16 @@ export function buildReminderPrompt(
     .replace("{days_overdue}", daysOverdue)
     .replace("{reminder_count}", String(loan.reminder_count));
 
-  return { system, user: "Genera el mensaje." };
+  let user = "Genera el mensaje.";
+  if (previousReminders.length > 0) {
+    const history = previousReminders
+      .map(
+        (r, i) =>
+          `Recordatorio ${i + 1} (arquetipo: ${r.tone}):\n"${r.generated_copy}"`
+      )
+      .join("\n\n");
+    user = `Mensajes anteriores ya enviados a este contacto (no los repitas ni los parafrasees):\n\n${history}\n\nGenera el nuevo mensaje.`;
+  }
+
+  return { system, user };
 }

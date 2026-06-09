@@ -142,7 +142,10 @@ export function LoanDetail({ loan, reminders, photoSignedUrl }: LoanDetailProps)
             {loan.title}
           </h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            {loan.contact_name} · {loan.contact_relationship}
+            <Link href={`/contacts/${loan.contact_id}`} className="hover:underline">
+              {loan.contact_name}
+            </Link>
+            {" "}· {loan.contact_relationship}
           </p>
         </div>
         <span

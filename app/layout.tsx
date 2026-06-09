@@ -3,13 +3,19 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Devuélvemelo",
-  description: "Gestiona préstamos y deudas entre amigos sin incómodos.",
+  description: "Reclama lo que te deben, sin el drama.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Devuélvemelo",
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1, // Evita el auto-zoom de iOS al enfocar inputs
+  themeColor: "#4f46e5",
 };
 
 export default function RootLayout({

@@ -25,20 +25,27 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresca la sesión. Esto es lo más importante: sin esta llamada
-  // los tokens expirados no se renuevan y el usuario queda bloqueado.
+  // Refresca la sesión. Sin esta llamada los tokens expirados no se renuevan.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
 
-  if (!user && pathname.startsWith("/dashboard")) {
+  // Rutas que requieren autenticación
+  const protectedPrefixes = ["/dashboard", "/loans", "/contacts", "/onboarding"];
+  const isProtected = protectedPrefixes.some((p) => pathname.startsWith(p));
+
+  if (!user && isProtected) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (!user && pathname.startsWith("/loans")) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  // Onboarding: redirigir a usuarios autenticados sin cookie a /onboarding
+  if (user && !pathname.startsWith("/onboarding") && !pathname.startsWith("/api")) {
+    const onboardingSeen = request.cookies.get("onboarding_seen")?.value;
+    if (!onboardingSeen) {
+      return NextResponse.redirect(new URL("/onboarding", request.url));
+    }
   }
 
   return supabaseResponse;

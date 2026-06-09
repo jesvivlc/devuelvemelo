@@ -52,6 +52,14 @@ Si en el futuro entra WhatsApp Business API o pasarela de pagos, será como feat
 | `app/(app)/layout.tsx` | Shell autenticado. Doble check de sesión (middleware + layout). |
 | `app/(app)/dashboard/page.tsx` | Lista préstamos activos desde `loans_with_overdue`. Filtro por `status` y por `category` (vía `?category=` en URL). Limit 50. |
 | `app/(app)/dashboard/CategoryFilter.tsx` | Client Component: `<select>` que actualiza el query param `category` en la URL para filtrar el dashboard. |
+| `app/(app)/contacts/page.tsx` | Lista de contactos con conteo de préstamos activos por persona. |
+| `app/(app)/contacts/[id]/page.tsx` | Historial completo de préstamos con un contacto (activos + pasados). |
+| `app/(app)/onboarding/page.tsx` | Onboarding de 3 pantallas (Client Component). Se muestra una vez al primer acceso y nunca más. |
+| `app/(app)/onboarding/actions.ts` | Server action que setea la cookie `onboarding_seen` para marcar el onboarding como completado. |
+| `app/manifest.ts` | PWA manifest: nombre, colores, icono. Next.js lo sirve en `/manifest.webmanifest`. |
+| `public/icon.svg` | Icono de la app (flecha de retorno sobre fondo índigo). |
+| `app/api/cron/reminders/route.ts` | Cron diario (8:00 UTC): detecta préstamos vencidos y envía email al propietario vía Resend. |
+| `vercel.json` | Configura el Vercel Cron (`0 8 * * *`). |
 | `app/(app)/loans/new/page.tsx` | Server Component que carga contactos y renderiza `LoanForm`. |
 | `app/(app)/loans/new/LoanForm.tsx` | Formulario client-side: toggle tipo, título, input de foto (objeto), importe (dinero), `ContactSelector`, fecha devolución. |
 | `app/(app)/loans/new/actions.ts` | `createLoan` (con subida real de foto a Supabase Storage `loan-photos`) y `createContact`, ambas con Zod + trackEvent. `category` validada en servidor. |
@@ -77,13 +85,14 @@ Si en el futuro entra WhatsApp Business API o pasarela de pagos, será como feat
 
 Pendientes de implementar: `reminder_sent` (requiere tracking client-side cuando el usuario toca el deep link), `tone_selected`.
 
-### Lo que falta construir (MVP)
+### Lo que falta construir
 
-- [ ] Página de gestión de contactos (`/contacts`) — listar todos los contactos, editar y eliminar. Ahora solo existe creación inline desde el formulario de préstamo.
-- [ ] Filtros en el dashboard (por estado: activo/vencido/recordado; por tipo: objeto/dinero).
+- [ ] Filtros de estado en el dashboard (activo/vencido/recordado).
 - [ ] Toggle de vista en el dashboard (lista vs. cuadrícula).
 - [ ] Analytics: `reminder_sent` (cuando el usuario toca el deep link) y `tone_selected`.
-- [ ] Workflow n8n cron diario: notificar al propietario de préstamos vencidos para que decida si reclamar.
+- [ ] Editar y eliminar contactos desde `/contacts/[id]`.
+- [ ] Configurar `RESEND_API_KEY`, `RESEND_FROM_EMAIL` y `CRON_SECRET` en Vercel para activar los recordatorios automáticos.
+- [ ] Iconos PNG (192×192 y 512×512) para soporte completo de PWA en iOS.
 
 ## Reglas de código
 

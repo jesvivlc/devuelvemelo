@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#4f46e5"/>
+  <!-- Cuerpo del arco: entra por arriba a la derecha, rodea hacia abajo y sale por abajo a la derecha -->
+  <path d="M 352 144 L 204 144 C 136 144 88 192 88 260 C 88 328 136 376 204 376 L 336 376"
+        stroke="white" stroke-width="46" stroke-linecap="round" fill="none"/>
+  <!-- Punta de flecha (devolver = hacia arriba) -->
+  <path d="M 288 100 L 352 144 L 408 96"
+        stroke="white" stroke-width="46" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
