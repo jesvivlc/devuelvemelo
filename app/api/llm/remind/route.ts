@@ -134,7 +134,8 @@ export async function POST(request: Request) {
       last_reminded_at: new Date().toISOString(),
       status: "reminded",
     })
-    .eq("id", loan_id);
+    .eq("id", loan_id)
+    .eq("owner_id", user.id);
 
   if (loanUpdateError) {
     console.error("[llm/remind] loans.update failed:", loanUpdateError);
