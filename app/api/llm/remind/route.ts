@@ -100,8 +100,9 @@ export async function POST(request: Request) {
     );
   }
 
-  // Persistir el reminder y actualizar el préstamo usando el service client
-  // para evitar problemas de timing con las cookies en route handlers.
+  // A partir de aquí se escribe con el cliente de service_role, que se salta la
+  // RLS. La pertenencia del préstamo ya está comprobada arriba (404 si no es
+  // del usuario), y cada escritura va acotada por owner_id de forma explícita.
   const service = createServiceClient();
 
   const { data: reminder, error: reminderError } = await service
