@@ -227,3 +227,7 @@ Para producción (Vercel), añadir también la URL de producción.
 - Si añades un evento nuevo de analytics, anótalo en la tabla de "Eventos instrumentados".
 - Si tomas una decisión de UX/arquitectura no trivial, anótala en "Decisiones de arquitectura tomadas".
 - Los props opcionales en componentes deben tiparse como `T | undefined` (no solo `T`) cuando `exactOptionalPropertyTypes` esté activo.
+
+
+## Gemini
+Skill `gemini-lectura` para lecturas de >20.000 tokens sin datos personales ni secretos. Nivel RESTRINGIDO: **no mandar contenido de este proyecto a Gemini** (datos personales o de clientes). Ver `GEMINI.md`.
